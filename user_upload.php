@@ -98,13 +98,40 @@ function insert_data($conn, $users)
     }
 }
 
+function _usage()
+{
+    echo "usage: php user_upload.php [--file <filename>] [--create_table]
+    [--dry_run] [-u <username>] [-p] [-h <hostname>] [--help]\n";
+    echo "file             name of the CSV to be parsed\n";
+    echo "create_table     MySQL users table to be built\n";
+    echo "dry_run          used with the --file directive, and run the
+                           script but not insert into the DB\n";
+    echo "u                MySQL username\n";
+    echo "p                MySQL password\n";
+    echo "h                MySQL host\n";
+    echo "help             output the above list of directives with details\n";
+}
+
 function main()
 {
-    $conn = create_db();
-    create_tb($conn);
-    $users = read_file();
-    $formatted_users = format_user_data($users);
-    insert_data($conn, $formatted_users);
+    // $conn = create_db();
+    // create_tb($conn);
+    // $users = read_file();
+    // $formatted_users = format_user_data($users);
+    // insert_data($conn, $formatted_users);
+
+    $longdir = array(
+        "file:",
+        "create_table",
+        "dry_run",
+        "help"
+    );
+    $directives = getopt("", $longdir);
+
+    if (array_key_exists("help", $directives)) {
+        _usage();
+    }
 }
+
 
 main();
