@@ -50,12 +50,12 @@ function read_file()
 
     $users = [];
     if (($handle = fopen("users.csv", "r")) !== FALSE) {
-        $schema = fgetcsv($handle);
+        $field = fgetcsv($handle);
         while (($line = fgetcsv($handle)) !== FALSE) {
             $data = [
-                trim($schema[0]) => trim($line[0]),
-                trim($schema[1]) => trim($line[1]),
-                trim($schema[2]) => trim($line[2]),
+                trim($field[0]) => trim($line[0]),
+                trim($field[1]) => trim($line[1]),
+                trim($field[2]) => trim($line[2]),
             ];
 
             array_push($users, $data);
@@ -84,21 +84,27 @@ function format_user_data($users)
         }
     }
 
-    foreach ($formatted_users as $userr) {
-        echo var_dump($userr);
-    }
+    return $formatted_users;
 }
 
-function insert_data()
+function insert_data($conn, $users)
 {
+    for ($i = 0; $i < count($users); $i++) {
+        $fieldVal1 = mysqli_real_escape_string($conn, $users[$i]["name"]);
+        $fieldVal2 = mysqli_real_escape_string($conn, $users[$i]["surname"]);
+        $fieldVal3 = mysqli_real_escape_string($conn, $users[$i]["email"]);
+        $query = "INSERT INTO users (name, surname, email) VALUES ( '" . $fieldVal1 . "','" . $fieldVal2 . "','" . $fieldVal3 . "' )";
+        mysqli_query($conn, $query);
+    }
 }
 
 function main()
 {
-    // $conn = create_db();
-    // create_tb($conn);
+    $conn = create_db();
+    create_tb($conn);
     $users = read_file();
-    format_user_data($users);
+    $formatted_users = format_user_data($users);
+    insert_data($conn, $formatted_users);
 }
 
 main();
