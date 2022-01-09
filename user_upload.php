@@ -44,10 +44,61 @@ function create_tb($conn)
     }
 }
 
+function read_file()
+{
+    // validate if csv file
+
+    $users = [];
+    if (($handle = fopen("users.csv", "r")) !== FALSE) {
+        $schema = fgetcsv($handle);
+        while (($line = fgetcsv($handle)) !== FALSE) {
+            $data = [
+                trim($schema[0]) => trim($line[0]),
+                trim($schema[1]) => trim($line[1]),
+                trim($schema[2]) => trim($line[2]),
+            ];
+
+            array_push($users, $data);
+        }
+
+        return $users;
+        fclose($handle);
+    } else {
+        echo "Error opening the file.";
+    }
+}
+
+function format_user_data($users)
+{
+
+    $formatted_users = [];
+    for ($i = 0; $i < count($users); $i++) {
+        $user = $users[$i];
+
+        if (!filter_var($user["email"], FILTER_VALIDATE_EMAIL)) {
+            fprintf(STDOUT, "Invalid Email: %s\n", $user["email"]);
+        } else {
+            $formatted_users[$i]["name"] = ucfirst($user["name"]);
+            $formatted_users[$i]["surname"] = ucfirst($user["surname"]);
+            $formatted_users[$i]["email"] = strtolower($user["email"]);
+        }
+    }
+
+    foreach ($formatted_users as $userr) {
+        echo var_dump($userr);
+    }
+}
+
+function insert_data()
+{
+}
+
 function main()
 {
-    $conn = create_db();
-    create_tb($conn);
+    // $conn = create_db();
+    // create_tb($conn);
+    $users = read_file();
+    format_user_data($users);
 }
 
 main();
