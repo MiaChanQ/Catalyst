@@ -1,20 +1,14 @@
 <?php
 
-function create_db()
+function create_db($servername, $username, $password)
 {
-    $servername = "localhost";
-    $username = "catalyst";
-    $password = "qwert123Aa";
-    //$dbname = "catalystDB";
-
     // Create connection
-    $conn = mysqli_connect($servername, $username, $password);
-
-    // Check connection
-    if (!$conn) {
+    try {
+        $conn = mysqli_connect($servername, $username, $password);
+        echo "Connected MySQL successfully\n";
+    } catch (Throwable $Error) {
         die("Connection failed:\n" . mysqli_connect_error() . "\n");
     }
-    echo "Connected MySQL successfully\n";
 
     // Create database
     $sql = "CREATE DATABASE if not exists catalystDB";
@@ -24,7 +18,6 @@ function create_db()
     } else {
         echo "Error creating database: " . $conn->error . "\n";
     }
-
     return $conn;
 }
 
@@ -44,28 +37,40 @@ function create_tb($conn)
     }
 }
 
-function read_file()
+function read_file($filename)
 {
-    // validate if csv file
+    // Check if csv file or not.
+    try {
+        $extension = explode(".", $filename)[1];
+        if ($extension != "csv") {
+            die("File should be csv file. \n");
+        }
+    } catch (Exception $e) {
+        die("No file extention detected. \n");
+    }
+
 
     $users = [];
-    if (($handle = fopen("users.csv", "r")) !== FALSE) {
-        $field = fgetcsv($handle);
-        while (($line = fgetcsv($handle)) !== FALSE) {
-            $data = [
-                trim($field[0]) => trim($line[0]),
-                trim($field[1]) => trim($line[1]),
-                trim($field[2]) => trim($line[2]),
-            ];
-
-            array_push($users, $data);
-        }
-
-        return $users;
-        fclose($handle);
-    } else {
-        echo "Error opening the file.";
+    // Open the file.
+    try {
+        $handle = fopen($filename, "r");
+    } catch (Throwable $Error) {
+        die("Cannot open the file. \n");
     }
+    // Read the file.
+    $field = fgetcsv($handle);
+    while (($line = fgetcsv($handle)) !== FALSE) {
+        $data = [
+            trim($field[0]) => trim($line[0]),
+            trim($field[1]) => trim($line[1]),
+            trim($field[2]) => trim($line[2]),
+        ];
+
+        array_push($users, $data);
+    }
+
+    return $users;
+    fclose($handle);
 }
 
 function format_user_data($users)
@@ -119,19 +124,46 @@ function main()
     // $users = read_file();
     // $formatted_users = format_user_data($users);
     // insert_data($conn, $formatted_users);
-
+    $shortdir = "u:p:h:";
     $longdir = array(
         "file:",
         "create_table",
         "dry_run",
         "help"
     );
-    $directives = getopt("", $longdir);
-
+    $directives = getopt($shortdir, $longdir);
     if (array_key_exists("help", $directives)) {
-        _usage();
+        _usage($directives);
+        return;
     }
-}
 
+
+    $conn = create_db($directives["h"], $directives["u"], $directives["p"]);
+    if (array_key_exists("create_table", $directives)) {
+        create_tb($conn);
+        exit(0);
+    }
+
+    if (!array_key_exists("file", $directives)) {
+        fprintf(STDERR, "Error: No file chosen\n");
+        _usage();
+        exit(1);
+    }
+
+    if (!file_exists($directives["file"])) {
+        fprintf(STDERR, "Error: File is invalid or does not exist\n");
+        exit(2);
+    }
+
+    $users = read_file($directives["file"]);
+    $formatted_users = format_user_data($users);
+    if (array_key_exists("dry_run", $directives)) {
+        $conn->close();
+        return;
+    }
+    insert_data($conn, $formatted_users);
+    $conn->close();
+    exit(0);
+}
 
 main();
