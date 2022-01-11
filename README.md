@@ -7,7 +7,8 @@
 ### csv file format (email is unique)
 
 | name   | surname  | email          |
-| ------ | -----    |----------------|\
+| ------ | -----    |----------------|
+| John   | Smith    |join@gmail.com  |
 
 ## How to use
 > usage: php user_upload.php [--file <filename>] [--create_table]
