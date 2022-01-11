@@ -1,28 +1,36 @@
 <?php
 
+
+/**
+ * Create and connect to the database.
+ */
 function create_db($servername, $username, $password)
 {
-    // Create connection
-    try {
-        $conn = mysqli_connect($servername, $username, $password);
-        echo "Connected MySQL successfully\n";
-    } catch (Throwable $Error) {
-        die("Connection failed:\n" . mysqli_connect_error() . "\n");
+    // Create connection.
+    $conn = mysqli_connect($servername, $username, $password);
+    if ($conn === FALSE) {
+        fprintf(STDERR, "MySql server can not be connected\n");
+        exit(6);
     }
-
-    // Create database
-    $sql = "CREATE DATABASE if not exists catalystDB";
+    echo "Connect MySQL successfully. \n";
+    // Create database.
+    $sql = "CREATE DATABASE IF NOT EXISTS catalystDB";
     if ($conn->query($sql) === TRUE) {
         $conn->select_db("catalystDB");
-        echo "Database created successfully\n";
+        echo "Database connected successfully. \n";
     } else {
         echo "Error creating database: " . $conn->error . "\n";
+        exit(3);
     }
     return $conn;
 }
 
+/**
+ * Create the user table.
+ */
 function create_tb($conn)
 {
+    $conn->query("DROP TABLE IF EXISTS users");
     $sql = "CREATE TABLE users (
         id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(30) NOT NULL,
@@ -31,12 +39,16 @@ function create_tb($conn)
         );";
 
     if ($conn->query($sql) === TRUE) {
-        echo "Table users created successfully\n";
+        echo "Users table has been created successfully. \n";
     } else {
         echo "Error creating table: " . $conn->error . "\n";
+        exit(4);
     }
 }
 
+/**
+ * Read the csv file.
+ */
 function read_file($filename)
 {
     // Check if csv file or not.
@@ -48,17 +60,18 @@ function read_file($filename)
     } catch (Exception $e) {
         die("No file extention detected. \n");
     }
-
-
     $users = [];
-    // Open the file.
     try {
-        $handle = fopen($filename, "r");
+        $handle = fopen($filename, "r"); // Open the file.
     } catch (Throwable $Error) {
         die("Cannot open the file. \n");
     }
     // Read the file.
     $field = fgetcsv($handle);
+    if (count($field) != 3) {
+        fprintf(STDERR, "Csv file should have only three columns: name, surname, email.\n");
+        exit(5);
+    }
     while (($line = fgetcsv($handle)) !== FALSE) {
         $data = [
             trim($field[0]) => trim($line[0]),
@@ -68,11 +81,13 @@ function read_file($filename)
 
         array_push($users, $data);
     }
-
     return $users;
     fclose($handle);
 }
 
+/**
+ * Format the users data.
+ */
 function format_user_data($users)
 {
 
@@ -81,28 +96,37 @@ function format_user_data($users)
         $user = $users[$i];
 
         if (!filter_var($user["email"], FILTER_VALIDATE_EMAIL)) {
-            fprintf(STDOUT, "Invalid Email: %s\n", $user["email"]);
+            fprintf(STDOUT, "Invalid Email format: %s\n", $user["email"]);
         } else {
             $formatted_users[$i]["name"] = ucfirst($user["name"]);
             $formatted_users[$i]["surname"] = ucfirst($user["surname"]);
             $formatted_users[$i]["email"] = strtolower($user["email"]);
         }
     }
-
     return $formatted_users;
 }
 
+/**
+ * Insert data to database.
+ */
 function insert_data($conn, $users)
 {
     for ($i = 0; $i < count($users); $i++) {
         $fieldVal1 = mysqli_real_escape_string($conn, $users[$i]["name"]);
         $fieldVal2 = mysqli_real_escape_string($conn, $users[$i]["surname"]);
         $fieldVal3 = mysqli_real_escape_string($conn, $users[$i]["email"]);
-        $query = "INSERT INTO users (name, surname, email) VALUES ( '" . $fieldVal1 . "','" . $fieldVal2 . "','" . $fieldVal3 . "' )";
-        mysqli_query($conn, $query);
+        $query = "INSERT INTO users (name, surname, email) VALUES 
+        ( '" . $fieldVal1 . "','" . $fieldVal2 . "','" . $fieldVal3 . "' )";
+        $result = mysqli_query($conn, $query);
+        if ($result  === FALSE) {
+            fprintf(STDOUT, "Insert fault: duplicated email %s\n", $fieldVal3);
+        }
     }
 }
 
+/**
+ * Command line directives.
+ */
 function _usage()
 {
     echo "usage: php user_upload.php [--file <filename>] [--create_table]
@@ -117,13 +141,13 @@ function _usage()
     echo "help             output the above list of directives with details\n";
 }
 
+/**
+ * Main function.
+ */
 function main()
 {
-    // $conn = create_db();
-    // create_tb($conn);
-    // $users = read_file();
-    // $formatted_users = format_user_data($users);
-    // insert_data($conn, $formatted_users);
+    set_error_handler(function () { /* ignore errors */
+    });
     $shortdir = "u:p:h:";
     $longdir = array(
         "file:",
@@ -159,7 +183,7 @@ function main()
     $formatted_users = format_user_data($users);
     if (array_key_exists("dry_run", $directives)) {
         $conn->close();
-        return;
+        exit(0);
     }
     insert_data($conn, $formatted_users);
     $conn->close();
