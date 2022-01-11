@@ -1,6 +1,5 @@
 <?php
 
-
 /**
  * Create and connect to the database.
  */
@@ -90,7 +89,6 @@ function read_file($filename)
  */
 function format_user_data($users)
 {
-
     $formatted_users = [];
     for ($i = 0; $i < count($users); $i++) {
         $user = $users[$i];
@@ -148,6 +146,7 @@ function main()
 {
     set_error_handler(function () { /* ignore errors */
     });
+    // Set short and long options.
     $shortdir = "u:p:h:";
     $longdir = array(
         "file:",
@@ -155,12 +154,12 @@ function main()
         "dry_run",
         "help"
     );
+
     $directives = getopt($shortdir, $longdir);
     if (array_key_exists("help", $directives)) {
         _usage($directives);
         return;
     }
-
 
     $conn = create_db($directives["h"], $directives["u"], $directives["p"]);
     if (array_key_exists("create_table", $directives)) {
@@ -185,6 +184,7 @@ function main()
         $conn->close();
         exit(0);
     }
+
     insert_data($conn, $formatted_users);
     $conn->close();
     exit(0);
